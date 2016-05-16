@@ -9,6 +9,7 @@ use WindowsAzure\Blob\Models\CreateBlobOptions;
 use WindowsAzure\Blob\Models\CreateContainerOptions;
 use WindowsAzure\Blob\Models\DeleteContainerOptions;
 use WindowsAzure\Blob\Models\ListBlobsOptions;
+use WindowsAzure\Blob\Models\PublicAccessType;
 use WindowsAzure\Common\ServiceException;
 
 /**
@@ -18,7 +19,8 @@ use WindowsAzure\Common\ServiceException;
  * @author Paweł Czyżewski <pawel.czyzewski@enginewerk.com>
  */
 class AzureBlobStorage implements Adapter,
-                                  MetadataSupporter
+                                  MetadataSupporter,
+                                  GetUrlAware
 {
     /**
      * Error constants.
@@ -60,6 +62,39 @@ class AzureBlobStorage implements Adapter,
         if ($create) {
             $this->createContainer($containerName);
         }
+    }
+
+    /**
+     * Gets the publicly accessible URL of an Azure Storage object.
+     *
+     * @param string $key     Object key
+     * @param array  $options 
+     *
+     * @return string
+     */
+    public function getUrl($key, array $options = array('scheme' => 'https'))
+    {
+        $this->init();
+
+        try {
+            $containerPublicAccessType = $this->blobProxy->getContainerAcl($this->containerName)->getContainerAcl()->getPublicAccess();
+        } catch (ServiceException $e) {
+            throw new \RuntimeException(sprintf(
+                'Failed to check public access type for container "%s"',
+                $this->containerName
+            ));
+        }
+
+        if(PublicAccessType::NONE === $containerPublicAccessType) {
+            return false;
+        }
+
+        return sprintf(
+            '%s://%s.blog.core.windows.net/%s/%s',
+            $options['scheme'],
+            $this->blobProxy->getAccountName(),
+            $key
+        );
     }
 
     /**

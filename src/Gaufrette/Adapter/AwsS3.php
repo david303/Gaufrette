@@ -13,7 +13,8 @@ use Aws\S3\S3Client;
 class AwsS3 implements Adapter,
                        MetadataSupporter,
                        ListKeysAware,
-                       SizeCalculator
+                       SizeCalculator,
+                       GetUrlAware
 {
     protected $service;
     protected $bucket;
